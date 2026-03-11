@@ -1,8 +1,0 @@
-"Model","Max_Coef","Problematic_Coef","Max_SE","Problematic_SE","Pseudo_R2","Converged","Iterations","Coef_Flag","SE_Flag","R2_Flag","Conv_Flag","Iter_Flag","Overall_Status"
-"core_ogf_presence",8.5,"None",2.98,"None",0.734,"Yes",9,"WARNING","PASS","PASS","PASS","PASS","⚠️  BORDERLINE"
-"mycoblastus_presence",198.17,"(Intercept), elevation_scaled, volume_snags_scaled, tree_height_median_scaled, canopy_cover_scaled, regeneration_scaled, decay3_scaled, dbh_max_scaled, dbh_sd_scaled, n_dead_50cm_scaled, ba_spruce_scaled, ba_beech_scaled, decay4_scaled, decay5_scaled",126536.27,"(Intercept), elevation_scaled, volume_snags_scaled, tree_height_median_scaled, canopy_cover_scaled, regeneration_scaled, decay2_scaled, decay3_scaled, dbh_max_scaled, dbh_sd_scaled, n_dead_50cm_scaled, ba_spruce_scaled, ba_beech_scaled, decay4_scaled, decay5_scaled",1,"No",25,"FAIL","FAIL","FAIL","FAIL","FAIL","❌ INVALID"
-"ochrolechia_presence",0.92,"None",0.48,"None",0.367,"Yes",5,"PASS","PASS","PASS","PASS","PASS","✅ VALID"
-"xylographa_presence",2.43,"None",0.71,"None",0.239,"Yes",6,"PASS","PASS","PASS","PASS","PASS","✅ VALID"
-"parmelia_agg_presence",0.7,"None",0.46,"None",0.194,"Yes",4,"PASS","PASS","PASS","PASS","PASS","✅ VALID"
-"elite_rare_presence",3.93,"None",1.05,"None",0.374,"Yes",7,"PASS","PASS","PASS","PASS","PASS","✅ VALID"
-"calicioids_richness",0.4,"None",0.14,"None",NA,"Yes",5,"PASS","PASS","N/A","PASS","PASS","✅ VALID"
