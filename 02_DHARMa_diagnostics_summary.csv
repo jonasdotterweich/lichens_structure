@@ -1,0 +1,8 @@
+"Model","Dispersion_p","ZeroInflation_p","Outliers_p","SpatialAutocorr_p","Dispersion_OK","ZeroInflation_OK","Outliers_OK","Spatial_OK"
+"core_ogf_presence",0.966,1,1,0.7514,TRUE,TRUE,TRUE,TRUE
+"mycoblastus_presence",0.688,1,1,0.2912,TRUE,TRUE,TRUE,TRUE
+"ochrolechia_presence",0.978,1,1,0.3406,TRUE,TRUE,TRUE,TRUE
+"xylographa_presence",0.796,1,1,0.3296,TRUE,TRUE,TRUE,TRUE
+"parmelia_agg_presence",0.838,1,1,0.7968,TRUE,TRUE,TRUE,TRUE
+"elite_rare_presence",0.954,1,1,0.4094,TRUE,TRUE,TRUE,TRUE
+"calicioids_richness",0.022,0.014,1,0.2414,FALSE,FALSE,TRUE,TRUE
