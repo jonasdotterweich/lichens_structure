@@ -2,12 +2,12 @@
 # 01a_lichen_prep.R
 # ==============================================================================
 # PURPOSE  : Load, translate, explore, group, and export lichen data for
-#            the Bohubin NP case study.
+#            the Sumava NP case study.
 # OUTPUT   : studies/bohubin_CZ/outputs/lichen_clean.csv
 #              Canonical schema: plot_id | X | Y | <group>_presence (0/1 int)
 #                                              | <group>_richness (int)
 # AUTHOR   : Jonas Dotterweich
-# STUDY    : Bohubin NP, Czech Republic (120 plots)
+# STUDY    : Sumava NP, Czech Republic (120 plots)
 # NOTE     : All study-specific decisions (translations, species groupings,
 #            indicator lists) live inside this file by design. They are NOT
 #            moved to a shared config because they are dataset-specific and
@@ -27,8 +27,8 @@ library(pheatmap)
 # Paths (relative to project root — edit only these two lines for a new study)
 PATH_LICHEN_RAW  <- "Lichens/Licen_data.xlsx"
 PATH_COORDS_RAW  <- "Lichens/Biodiversity_120 plot.xlsx"
-PATH_OUT_CLEAN   <- "studies/bohubin_CZ/outputs/lichen_clean.csv"
-PATH_OUT_REPORTS <- "studies/bohubin_CZ/outputs/"   # QC / diagnostic CSVs
+PATH_OUT_CLEAN   <- "studies/sumava_CZ/outputs/lichen_clean.csv"
+PATH_OUT_REPORTS <- "studies/sumava_CZ/outputs/"   # QC / diagnostic CSVs
 
 N_PLOTS <- 120   # Total survey plots in this study
 
