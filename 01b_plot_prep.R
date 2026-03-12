@@ -2,7 +2,7 @@
 # 01b_plot_prep.R
 # ==============================================================================
 # PURPOSE  : Load, translate, clean, and export structural predictor data for
-#            the Bohubin NP case study.
+#            the Sumava NP case study.
 # OUTPUT   : studies/bohubin_CZ/outputs/structure_clean.csv
 #              Canonical schema: plot_id | X | Y | <predictors...>
 # AUTHOR   : Jonas Dotterweich
