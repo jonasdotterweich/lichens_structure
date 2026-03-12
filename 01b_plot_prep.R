@@ -6,7 +6,7 @@
 # OUTPUT   : studies/bohubin_CZ/outputs/structure_clean.csv
 #              Canonical schema: plot_id | X | Y | <predictors...>
 # AUTHOR   : Jonas Dotterweich
-# STUDY    : Bohubin NP, Czech Republic (120 plots)
+# STUDY    : Sumava NP, Czech Republic (120 plots)
 # NOTE     : All study-specific decisions (Czech translations, variable
 #            rename map, decay stage groupings) live inside this file.
 #            They are NOT in a shared config for the same reason as 01a:
