@@ -50,15 +50,20 @@ check_species_prevalence <- function(data,
   }
 
   cover_col <- intersect(c("cover", "Cover", "abundance"), colnames(data))[1]
+  has_cover <- !is.na(cover_col)
+
+  .cover_stat <- function(fn) {
+    if (has_cover) fn(.data[[cover_col]], na.rm = TRUE) else NA_real_
+  }
 
   summary <- data |>
     dplyr::group_by(species) |>
     dplyr::summarise(
       n_plots            = dplyr::n_distinct(Plot),
       total_observations = dplyr::n(),
-      mean_cover   = if (!is.na(cover_col)) mean(.data[[cover_col]], na.rm = TRUE) else NA_real_,
-      median_cover = if (!is.na(cover_col)) median(.data[[cover_col]], na.rm = TRUE) else NA_real_,
-      max_cover    = if (!is.na(cover_col)) max(.data[[cover_col]], na.rm = TRUE) else NA_real_,
+      mean_cover         = .cover_stat(mean),
+      median_cover       = .cover_stat(median),
+      max_cover          = .cover_stat(max),
       .groups = "drop"
     ) |>
     dplyr::mutate(

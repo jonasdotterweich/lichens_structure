@@ -86,8 +86,7 @@ remove_high_missing_plots <- function(
   }
 
   plots_to_remove <- data |>
-    dplyr::mutate(.n_na = rowSums(is.na(dplyr::select(data,
-                                                       dplyr::all_of(present_preds))))) |>
+    dplyr::mutate(.n_na = rowSums(is.na(data[, present_preds, drop = FALSE]))) |>
     dplyr::filter(.n_na > max_missing) |>
     dplyr::pull(dplyr::all_of(id_col))
 
