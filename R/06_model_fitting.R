@@ -75,7 +75,7 @@ fit_nb_model <- function(data,
                          response   = "calicioids_richness",
                          predictors) {
   if (!requireNamespace("glmmTMB", quietly = TRUE)) {
-    stop("Package 'glmmTMB' is required. Install with: install.packages('glmmTMB')")
+    stop("Package 'glmmTMB' is required. Install from CRAN with: install.packages(\"glmmTMB\")")
   }
   stopifnot(is.data.frame(data), is.character(response),
             is.character(predictors), length(predictors) > 0)
@@ -203,16 +203,98 @@ extract_model_summary <- function(model, model_name = NULL) {
   result
 }
 
+#' Fit a GLMM (Generalized Linear Mixed Model) using glmmTMB
+#'
+#' Extends \code{fit_glm_model()} by adding random effects to the formula.
+#' Uses \code{glmmTMB::glmmTMB()} for all families, including binomial and
+#' negative-binomial.
+#'
+#' **Why use a GLMM instead of a GLM?**
+#' Add random effects when your plots are grouped (e.g. by forest region,
+#' survey cluster, or observer) and you want to account for non-independence
+#' within groups.  The syntax change is minimal: specify the grouping
+#' structure in \code{random_effects} and \code{glmmTMB} handles the rest.
+#' DHARMa diagnostics work identically for GLMMs.
+#'
+#' @param data A data frame or tibble (pipe-friendly).
+#' @param response Character. Name of the response column.
+#' @param predictors Character vector of fixed-effect predictor column names.
+#' @param random_effects Character vector of random effect terms in
+#'   \code{lme4}/\code{glmmTMB} formula syntax.  Examples:
+#'   \code{c("(1|region)")} – random intercept by region;
+#'   \code{c("(1|region)", "(1|observer)")} – two crossed random intercepts;
+#'   \code{c("(dbh_max|region)")} – random slope + intercept.
+#'   Default: \code{get_project_config()$glmm$random_effects}.
+#' @param family A family object.  Default \code{binomial(link = "logit")} for
+#'   binary responses.  Use \code{glmmTMB::nbinom2} for count responses.
+#' @return A fitted \code{glmmTMB} object with attribute \code{model_name}.
+#' @examples
+#' m_parmelia_glmm <- fit_glmm_model(
+#'   modeling_data,
+#'   response       = "parmelia_agg_presence",
+#'   predictors     = predictors_scaled,
+#'   random_effects = c("(1|region)")
+#' )
+#'
+#' # Count response with NB family
+#' m_calicioids_glmm <- fit_glmm_model(
+#'   modeling_data,
+#'   response       = "calicioids_richness",
+#'   predictors     = predictors_scaled,
+#'   random_effects = c("(1|region)"),
+#'   family         = glmmTMB::nbinom2
+#' )
+fit_glmm_model <- function(data,
+                            response,
+                            predictors,
+                            random_effects = get_project_config()$glmm$random_effects,
+                            family         = stats::binomial(link = "logit")) {
+  if (!requireNamespace("glmmTMB", quietly = TRUE)) {
+    stop("Package 'glmmTMB' is required. Install from CRAN with: install.packages(\"glmmTMB\")")
+  }
+  stopifnot(is.data.frame(data), is.character(response),
+            is.character(predictors), length(predictors) > 0)
 
-# -----------------------------------------------------------------------------
-# INTERNAL HELPERS
-# -----------------------------------------------------------------------------
+  if (length(random_effects) == 0) {
+    stop("fit_glmm_model() requires at least one random effect.\n",
+         "Set glmm$random_effects in utils.R or pass random_effects directly.\n",
+         "For a standard GLM with no random effects use fit_glm_model().")
+  }
+
+  if (!response %in% colnames(data)) {
+    stop("Response column '", response, "' not found in data.")
+  }
+  missing_preds <- setdiff(predictors, colnames(data))
+  if (length(missing_preds) > 0) {
+    stop("Predictor column(s) not found: ", paste(missing_preds, collapse = ", "))
+  }
+
+  fixed_part    <- paste(predictors, collapse = " + ")
+  re_part       <- paste(random_effects, collapse = " + ")
+  formula_str   <- paste0(response, " ~ ", fixed_part, " + ", re_part)
+  model_formula <- stats::as.formula(formula_str)
+
+  model <- glmmTMB::glmmTMB(model_formula, data = data, family = family)
+  attr(model, "model_name") <- response
+
+  lichen_message("Fitted GLMM: ", response,
+                 " (AIC = ", round(stats::AIC(model), 1), ")")
+  lichen_message("Random effects: ", paste(random_effects, collapse = ", "))
+  model
+}
+
+
+
 
 # Null-coalescing operator for base R
 `%||%` <- function(a, b) if (!is.null(a)) a else b
 
 .detect_family <- function(model) {
-  if (inherits(model, "glmmTMB")) return("nb")
+  if (inherits(model, "glmmTMB")) {
+    fam_name <- tryCatch(model$modelInfo$family$family, error = function(e) "unknown")
+    if (grepl("nbinom", fam_name, ignore.case = TRUE)) return("nb")
+    return("glmm")
+  }
   fam <- tryCatch(stats::family(model)$family, error = function(e) "unknown")
   if (fam == "binomial") "binomial" else fam
 }
@@ -264,8 +346,12 @@ extract_model_summary <- function(model, model_name = NULL) {
     icon <- if (flag == "PASS") "\u2705" else if (flag == "WARNING") "\u26A0\uFE0F" else "\U1F6A8"
     cat("  Pseudo-R\u00b2:", round(pseudo_r2, 3), icon, "\n")
     flag
-  } else if (family_type == "nb") {
-    disp <- sigma(model)
+  } else if (family_type %in% c("nb", "glmm")) {
+    disp <- tryCatch(sigma(model), error = function(e) NA_real_)
+    if (is.na(disp)) {
+      cat("  Dispersion: not available\n")
+      return("PASS")
+    }
     flag <- if (disp < 0.1 || disp > 100) "WARNING" else "PASS"
     icon <- if (flag == "PASS") "\u2705" else "\u26A0\uFE0F"
     cat("  Dispersion:", round(disp, 3), icon, "\n")

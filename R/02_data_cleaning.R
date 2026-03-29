@@ -62,31 +62,40 @@ assess_missing_values <- function(data) {
 #' Remove plots that exceed a threshold of missing values in key predictors
 #'
 #' @param data A data frame or tibble with a plot-ID column (pipe-friendly).
-#' @param key_predictors Character vector of column names to check.
-#'   Defaults to the six most critical structural predictors.
+#' @param key_predictors Character vector of column names to check for
+#'   missingness. Set to \code{NULL} (default) to skip this step and return
+#'   the data unchanged.  Pass the predictor columns relevant to your dataset,
+#'   e.g. \code{c("dbh_max", "canopy_cover", "deadwood_total")}.
 #' @param max_missing Integer. Maximum number of missing key predictors
 #'   allowed before a plot is removed. Default 2.
-#' @param id_col Character. Name of the plot ID column. Default "project_id".
+#' @param id_col Character. Name of the plot ID column.
+#'   Default from \code{get_project_config()$data$id_col}.
 #' @return The data with high-missing plots removed (tibble).
 #' @examples
 #' structure_clean <- structure_raw |>
-#'   remove_high_missing_plots(max_missing = 2)
+#'   remove_high_missing_plots(
+#'     key_predictors = c("dbh_max", "canopy_cover", "deadwood_total"),
+#'     max_missing    = 2
+#'   )
 remove_high_missing_plots <- function(
     data,
-    key_predictors = c("dbh_max", "deadwood_total", "canopy_cover",
-                       "ba_spruce", "ba_beech", "tree_height_median"),
-    max_missing = 2L,
-    id_col      = "project_id") {
+    key_predictors = NULL,
+    max_missing    = 2L,
+    id_col         = get_project_config()$data$id_col) {
   stopifnot(is.data.frame(data))
 
-  present_preds <- intersect(key_predictors, colnames(data))
-  if (length(present_preds) == 0) {
-    lichen_warning("None of the key_predictors found in data – skipping plot removal")
+  if (is.null(key_predictors) || length(key_predictors) == 0) {
+    lichen_message("key_predictors not specified – skipping plot removal by missing count")
     return(tibble::as_tibble(data))
   }
 
+  # Compute once – reused inside the mutate
+  present_preds <- intersect(key_predictors, colnames(data))
+
   plots_to_remove <- data |>
-    dplyr::mutate(.n_na = rowSums(is.na(data[, present_preds, drop = FALSE]))) |>
+    dplyr::mutate(
+      .n_na = rowSums(is.na(data[, present_preds, drop = FALSE]))
+    ) |>
     dplyr::filter(.n_na > max_missing) |>
     dplyr::pull(dplyr::all_of(id_col))
 
@@ -164,7 +173,7 @@ detect_and_handle_outliers <- function(
     cols         = dplyr::where(is.numeric),
     z_threshold  = 3,
     action       = c("flag", "cap", "remove"),
-    id_col       = "project_id") {
+    id_col       = get_project_config()$data$id_col) {
   stopifnot(is.data.frame(data))
   action <- match.arg(action)
 

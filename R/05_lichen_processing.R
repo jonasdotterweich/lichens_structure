@@ -89,130 +89,121 @@ check_species_prevalence <- function(data,
 }
 
 
-#' Create lichen species groups / response variables for modeling
+#' Create lichen species groups / response variables for modelling
 #'
-#' Aggregates raw lichen records into plot-level presence/absence and count
-#' response variables. The groups returned match those used in the Šumava
-#' lichen-structure analysis:
+#' Aggregates raw lichen records into plot-level presence/absence and species-
+#' richness response variables.  The grouping is fully user-defined: pass a
+#' named list where each element describes one response variable.
 #'
-#' * `calicioids_richness` – species richness of calicioid (pin) lichens
-#' * `parmelia_agg_presence` – presence of *Parmelia* aggregate
-#' * `ochrolechia_presence` – presence of *Ochrolechia* spp.
-#' * `core_ogf_presence` – presence of core old-growth-forest assemblage
-#' * `mycoblastus_presence` – presence of *Mycoblastus* spp.
-#' * `xylographa_presence` – presence of *Xylographa vitiligo*
-#' * `elite_rare_presence` – presence of elite/rare lichen assemblage
+#' This replaces the previous hard-coded Šumava species lists, making the
+#' function applicable to any lichen dataset.
 #'
 #' @param data A data frame or tibble of raw lichen records (pipe-friendly).
-#'   Expected columns: `Plot`, `species`, and optionally `cover`.
-#' @param calicioid_species Character vector of calicioid species names to sum
-#'   for richness. Uses a curated default list when `NULL`.
-#' @param parmelia_species Character vector of *Parmelia* agg. species names.
-#' @param ochrolechia_species Character vector of *Ochrolechia* species names.
-#' @param core_ogf_species Character vector of core OGF indicator species.
-#' @param mycoblastus_species Character vector of *Mycoblastus* species names.
-#' @param xylographa_species Character vector of *Xylographa* species names.
-#' @param elite_species Character vector of elite/rare indicator species.
-#' @return A tibble with one row per plot and all response-variable columns.
+#'   Required columns: \code{Plot} and \code{species}.
+#' @param groups A named list.  Each element must be a list with two items:
+#'   \itemize{
+#'     \item \code{type}    – \code{"binary"} (presence/absence) or
+#'                            \code{"count"} (species richness).
+#'     \item \code{species} – character vector of species names to include.
+#'   }
+#'   The name of the list element becomes the output column name.
+#'   See the example below.
+#' @param plot_col Character. Name of the plot identifier column in \code{data}.
+#'   Default "Plot".
+#' @param species_col Character. Name of the species name column in \code{data}.
+#'   Default "species".
+#' @return A tibble with one row per plot and one column per entry in
+#'   \code{groups}, plus the plot identifier column.
 #' @examples
-#' lichen_groups <- lichens_raw |> create_species_groups()
-create_species_groups <- function(
-    data,
-    calicioid_species  = NULL,
-    parmelia_species   = NULL,
-    ochrolechia_species = NULL,
-    core_ogf_species   = NULL,
-    mycoblastus_species = NULL,
-    xylographa_species = NULL,
-    elite_species      = NULL) {
+#' # Define your own species groups
+#' my_groups <- list(
+#'   parmelia_agg_presence = list(
+#'     type    = "binary",
+#'     species = c("Parmelia sulcata", "Parmelia saxatilis")
+#'   ),
+#'   calicioids_richness = list(
+#'     type    = "count",
+#'     species = c("Calicium viride", "Chaenotheca brunneola",
+#'                 "Chaenotheca ferruginea")
+#'   )
+#' )
+#' lichen_groups <- lichens_raw |> create_species_groups(groups = my_groups)
+create_species_groups <- function(data,
+                                  groups,
+                                  plot_col    = "Plot",
+                                  species_col = "species") {
 
   stopifnot(is.data.frame(data))
 
-  required <- c("Plot", "species")
+  if (missing(groups) || !is.list(groups) || length(groups) == 0) {
+    stop(
+      "create_species_groups() requires a non-empty named 'groups' list.\n",
+      "Each element must have $type ('binary' or 'count') and $species.\n",
+      "Example:\n",
+      "  groups <- list(\n",
+      "    my_presence = list(type = 'binary', species = c('Sp. A', 'Sp. B')),\n",
+      "    my_richness = list(type = 'count',  species = c('Sp. C', 'Sp. D'))\n",
+      "  )"
+    )
+  }
+
+  required <- c(plot_col, species_col)
   missing_cols <- setdiff(required, colnames(data))
   if (length(missing_cols) > 0) {
     stop("create_species_groups() requires columns: ",
          paste(missing_cols, collapse = ", "))
   }
 
-  # Default species lists (based on Šumava calicioid assemblage)
-  if (is.null(calicioid_species)) {
-    calicioid_species <- c(
-      "Calicium viride", "Chaenotheca brunneola", "Chaenotheca chrysocephala",
-      "Chaenotheca ferruginea", "Chaenotheca furfuracea", "Chaenotheca hispidula",
-      "Chaenotheca phaeocephala", "Chaenotheca sphaerocephala", "Chaenotheca stemonea",
-      "Chaenotheca subroscida", "Chaenotheca trichialis", "Chaenothecopsis pusilla",
-      "Mycocalicium subtile", "Microcalicium disseminatum"
-    )
-  }
-  if (is.null(parmelia_species)) {
-    parmelia_species <- c("Parmelia sulcata", "Parmelia saxatilis",
-                          "Parmelina tiliacea", "Parmotrema perlatum")
-  }
-  if (is.null(ochrolechia_species)) {
-    ochrolechia_species <- c("Ochrolechia arborea", "Ochrolechia pallescens",
-                             "Ochrolechia turneri")
-  }
-  if (is.null(core_ogf_species)) {
-    core_ogf_species <- c("Lobaria pulmonaria", "Lobaria scrobiculata",
-                          "Sticta limbata", "Menegazzia terebrata",
-                          "Hypogymnia vittata", "Alectoria sarmentosa",
-                          "Bryoria nadvornikiana")
-  }
-  if (is.null(mycoblastus_species)) {
-    mycoblastus_species <- c("Mycoblastus sanguinarius", "Mycoblastus fucatus")
-  }
-  if (is.null(xylographa_species)) {
-    xylographa_species <- c("Xylographa vitiligo", "Xylographa parallela")
-  }
-  if (is.null(elite_species)) {
-    elite_species <- c(core_ogf_species, "Usnea longissima", "Evernia divaricata",
-                       "Cetrelia cetrarioides", "Platismatia norvegica")
-  }
-
-  .presence <- function(sp_list) {
-    data |>
-      dplyr::filter(species %in% sp_list) |>
-      dplyr::distinct(Plot) |>
-      dplyr::mutate(.present = 1L)
+  # Rename to standard names for internal processing
+  if (plot_col != "Plot" || species_col != "species") {
+    data <- data |>
+      dplyr::rename(Plot = dplyr::all_of(plot_col),
+                    species = dplyr::all_of(species_col))
   }
 
   all_plots <- tibble::tibble(Plot = unique(data$Plot))
 
-  # Calicioid richness (count)
-  calicioid_richness <- data |>
-    dplyr::filter(species %in% calicioid_species) |>
-    dplyr::group_by(Plot) |>
-    dplyr::summarise(calicioids_richness = dplyr::n_distinct(species),
-                     .groups = "drop")
+  for (grp_name in names(groups)) {
+    grp <- groups[[grp_name]]
 
-  # Binary presence variables
-  make_presence_col <- function(sp_list, col_name) {
-    all_plots |>
-      dplyr::left_join(.presence(sp_list), by = "Plot") |>
-      dplyr::mutate(!!col_name := tidyr::replace_na(.present, 0L)) |>
-      dplyr::select(Plot, dplyr::all_of(col_name))
+    if (!all(c("type", "species") %in% names(grp))) {
+      stop("Group '", grp_name,
+           "' must have both $type and $species elements.")
+    }
+    if (!grp$type %in% c("binary", "count")) {
+      stop("Group '", grp_name,
+           "': $type must be 'binary' or 'count', not '", grp$type, "'.")
+    }
+
+    if (grp$type == "binary") {
+      present_plots <- data |>
+        dplyr::filter(species %in% grp$species) |>
+        dplyr::distinct(Plot) |>
+        dplyr::mutate(.present = 1L)
+
+      col_data <- all_plots |>
+        dplyr::left_join(present_plots, by = "Plot") |>
+        dplyr::mutate(!!grp_name := tidyr::replace_na(.present, 0L)) |>
+        dplyr::select(Plot, dplyr::all_of(grp_name))
+
+    } else {  # count / richness
+      col_data <- data |>
+        dplyr::filter(species %in% grp$species) |>
+        dplyr::group_by(Plot) |>
+        dplyr::summarise(!!grp_name := dplyr::n_distinct(species),
+                         .groups = "drop")
+      col_data <- all_plots |>
+        dplyr::left_join(col_data, by = "Plot") |>
+        dplyr::mutate(!!grp_name := tidyr::replace_na(!!rlang::sym(grp_name), 0L))
+    }
+
+    all_plots <- all_plots |>
+      dplyr::left_join(col_data, by = "Plot")
   }
 
-  parmelia_pres    <- make_presence_col(parmelia_species,    "parmelia_agg_presence")
-  ochrolechia_pres <- make_presence_col(ochrolechia_species, "ochrolechia_presence")
-  core_ogf_pres    <- make_presence_col(core_ogf_species,    "core_ogf_presence")
-  mycoblastus_pres <- make_presence_col(mycoblastus_species, "mycoblastus_presence")
-  xylographa_pres  <- make_presence_col(xylographa_species,  "xylographa_presence")
-  elite_pres       <- make_presence_col(elite_species,       "elite_rare_presence")
-
-  groups <- all_plots |>
-    dplyr::left_join(calicioid_richness, by = "Plot") |>
-    dplyr::mutate(calicioids_richness = tidyr::replace_na(calicioids_richness, 0L)) |>
-    dplyr::left_join(parmelia_pres,    by = "Plot") |>
-    dplyr::left_join(ochrolechia_pres, by = "Plot") |>
-    dplyr::left_join(core_ogf_pres,    by = "Plot") |>
-    dplyr::left_join(mycoblastus_pres, by = "Plot") |>
-    dplyr::left_join(xylographa_pres,  by = "Plot") |>
-    dplyr::left_join(elite_pres,       by = "Plot")
-
-  lichen_message("Species groups created for ", nrow(groups), " plots")
-  tibble::as_tibble(groups)
+  lichen_message("Species groups created: ", length(groups),
+                 " response variable(s) for ", nrow(all_plots), " plots")
+  tibble::as_tibble(all_plots)
 }
 
 

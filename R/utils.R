@@ -1,9 +1,24 @@
 # =============================================================================
 # utils.R
-# Helper functions for the Šumava lichen-structure modeling project
+# Helper functions and project configuration
 # =============================================================================
 # Provides: path helpers (here::here()), configuration loading,
 #           message formatting, and generic file I/O utilities.
+#
+# ─────────────────────── HOW TO USE FOR A NEW DATASET ────────────────────────
+#
+# utils.R is the single place to change when you move to a new dataset.
+# Update the sections below and all other scripts will pick up the changes:
+#
+#   1. data$id_col           → column name used as the plot identifier
+#   2. data$n_plots          → total number of surveyed plots (prevalence denominator)
+#   3. output$root           → where model outputs are written
+#   4. categorical$*         → management levels / species codes for your system
+#   5. lichen_groups$*       → response variable column names in your modelling data
+#   6. glmm$random_effects   → add random effects here to use fit_glmm_model()
+#
+# All R/0x_*.R functions read their defaults from get_project_config(), so
+# changing this file is usually enough – no need to edit the other scripts.
 # =============================================================================
 
 library(here)
@@ -15,35 +30,70 @@ library(readr)
 # CONFIGURATION
 # -----------------------------------------------------------------------------
 
-#' Return the default project configuration as a named list
+#' Return the project configuration as a named list
 #'
-#' @return A named list with file paths, modeling thresholds, and output
-#'   directory settings.
+#' Edit the values in this function to adapt the framework to a new dataset.
+#' All downstream functions read their defaults from this config, so changing
+#' values here propagates through the entire workflow.
+#'
+#' @return A named list with data settings, output paths, modelling thresholds,
+#'   categorical encoding rules, response variable names, and GLMM settings.
 #' @examples
 #' cfg <- get_project_config()
-#' cfg$data$structural
+#' cfg$data$id_col
+#' cfg$categorical$management_levels
 get_project_config <- function() {
   list(
+
+    # ── DATA ────────────────────────────────────────────────────────────────
+    # Paths are only used by the helper functions in 01_data_loading.R.
+    # Your own prep scripts (01a, 01b) can ignore these.
     data = list(
+      id_col       = "project_id",               # plot identifier column name
+      n_plots      = 120L,                        # total number of surveyed plots
       structural   = here::here("Lichens", "Structural_data.xlsx"),
       lichen       = here::here("Lichens", "Licen_data.xlsx"),
-      coordinates  = here::here("Lichens", "Biodiversity_120 plot.xlsx"),
-      n_plots      = 120L
+      coordinates  = here::here("Lichens", "Biodiversity_120 plot.xlsx")
     ),
+
+    # ── OUTPUT DIRECTORIES ──────────────────────────────────────────────────
     output = list(
       root     = here::here("Lichens", "model_outputs"),
       standard = here::here("Lichens", "model_outputs", "standard"),
       reduced  = here::here("Lichens", "model_outputs", "reduced")
     ),
+
+    # ── MODELLING THRESHOLDS ────────────────────────────────────────────────
     modeling = list(
       prevalence_min    = 20,    # minimum species prevalence (%) for modeling
       prevalence_max    = 80,    # maximum species prevalence (%) for modeling
-      missing_threshold = 2L,    # maximum missing key predictors before removing a plot
+      missing_threshold = 2L,    # max missing key predictors before removing a plot
       outlier_z         = 3,     # |Z-score| threshold to flag extreme outliers
       vif_threshold     = 10,    # VIF threshold for collinearity
       cor_threshold     = 0.7,   # |r| threshold for high correlation
       n_sim_dharma      = 1000L  # DHARMa simulation iterations
     ),
+
+    # ── CATEGORICAL ENCODING ────────────────────────────────────────────────
+    # These values drive encode_management(), encode_dominant_species(), etc.
+    # Update them to match the category labels in YOUR cleaned data.
+    categorical = list(
+      # Management levels ordered from least → most intensive logging.
+      # The first element is treated as "unlogged" (logged = 0).
+      management_levels = c(
+        "no logging, no stumps",
+        "logging with most biomass left in place",
+        "logging with minority of biomass left in place",
+        "logging without leaving biomass"
+      ),
+      # Dominant tree species codes to keep as individual factor levels.
+      # All other codes are collapsed to "other".
+      main_tree_species = c("SM", "BK", "JD")
+    ),
+
+    # ── RESPONSE VARIABLES ──────────────────────────────────────────────────
+    # Column names in the modelling data frame.
+    # Update to match your own response variables.
     lichen_groups = list(
       binary = c(
         "parmelia_agg_presence",
@@ -54,6 +104,21 @@ get_project_config <- function() {
         "elite_rare_presence"
       ),
       count  = "calicioids_richness"
+    ),
+
+    # ── GLMM SETTINGS ───────────────────────────────────────────────────────
+    # Used by fit_glmm_model() in 06_model_fitting.R.
+    # Add random effects here when you want to account for clustering/grouping.
+    #
+    # glmmTMB syntax examples:
+    #   "(1|region)"           – random intercept per geographic region
+    #   "(1|plot_cluster)"     – random intercept per plot cluster
+    #   "(1|observer)"         – random intercept per observer/field crew
+    #   "(dbh_max|region)"     – random slope + intercept per region
+    #
+    # Leave as character() for standard GLMs (no random effects).
+    glmm = list(
+      random_effects = character()
     )
   )
 }
