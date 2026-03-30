@@ -1,4 +1,4 @@
-# History files
+o# History files
 .Rhistory
 .Rapp.history
 
@@ -53,4 +53,4 @@ data/
 
 # R model outputs
 *.rds
-model_outputs/
+outputs/
